@@ -1,5 +1,5 @@
 from abc import abstractmethod
-from typing import Optional
+from typing import Optional, Dict
 from app.domain.asset import Asset
 from app.repositories.base import AbstractRepository
 
@@ -20,4 +20,9 @@ class AbstractAssetRepository(AbstractRepository[Asset]):
     @abstractmethod
     async def count_active_by_category(self, category_id: str) -> int:
         """Count how many active assets (non-RETIRED, non-DISPOSED) reference this category ID."""
+        pass
+
+    @abstractmethod
+    async def count_by_status(self, department_id: Optional[str] = None) -> Dict[str, int]:
+        """Return status counts in the persistence layer."""
         pass

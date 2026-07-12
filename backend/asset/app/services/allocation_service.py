@@ -1,5 +1,6 @@
 from datetime import datetime, timezone
 from typing import Optional
+from app.domain.notification import NotificationType
 from app.domain.allocation import AssetAllocation
 from app.domain.asset import AssetStatus
 from app.domain.user import Role
@@ -23,13 +24,15 @@ class AllocationService:
         asset_repository: AbstractAssetRepository,
         user_repository: AbstractUserRepository,
         dept_repository: AbstractDepartmentRepository,
-        lifecycle_service: AssetLifecycleService
+        lifecycle_service: AssetLifecycleService,
+        notification_service=None
     ):
         self.alloc_repo = alloc_repository
         self.asset_repo = asset_repository
         self.user_repo = user_repository
         self.dept_repo = dept_repository
         self.lifecycle_service = lifecycle_service
+        self.notification_service = notification_service
 
     async def allocate_asset(
         self,
@@ -100,6 +103,8 @@ class AllocationService:
         )
 
         business_logger.info(f"Asset '{asset.asset_tag}' allocated to {allocated_to_type} '{allocated_to_id}'")
+        if self.notification_service and allocated_to_type == "EMPLOYEE":
+            await self.notification_service.notify(allocated_to_id, NotificationType.ASSET_ASSIGNED, {"entity_id": created.id, "entity_type": "allocation", "message": f"Asset {asset.asset_tag} was assigned to you."})
         return created
 
     async def return_asset(

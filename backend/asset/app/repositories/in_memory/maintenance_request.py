@@ -49,7 +49,7 @@ class InMemoryMaintenanceRequestRepository(AbstractMaintenanceRequestRepository)
                 items = [
                     r for r in items
                     if r.status in (MaintenanceStatus.IN_PROGRESS, MaintenanceStatus.TECHNICIAN_ASSIGNED)
-                    or r.raised_at.date() == today
+                    or (r.raised_at.date() == today and r.status != MaintenanceStatus.RESOLVED)
                 ]
 
             # Sort
@@ -95,3 +95,13 @@ class InMemoryMaintenanceRequestRepository(AbstractMaintenanceRequestRepository)
                 if r.status in (MaintenanceStatus.IN_PROGRESS, MaintenanceStatus.TECHNICIAN_ASSIGNED)
                 or r.raised_at.date() == today
             ]
+
+    async def list_maintenance_today(self) -> List[MaintenanceRequest]:
+        async with self._lock:
+            today = datetime.now(timezone.utc).date()
+            return [
+                r for r in self._requests.values()
+                if r.status in (MaintenanceStatus.IN_PROGRESS, MaintenanceStatus.TECHNICIAN_ASSIGNED)
+                or (r.raised_at.date() == today and r.status != MaintenanceStatus.RESOLVED)
+            ]
+

@@ -7,6 +7,7 @@ from app.logging.logger import business_logger
 from app.repositories.maintenance_request import AbstractMaintenanceRequestRepository
 from app.repositories.asset import AbstractAssetRepository
 from app.services.asset_lifecycle_service import AssetLifecycleService
+from app.domain.notification import NotificationType
 
 # Explicit Maintenance Workflow State Transition Matrix
 MAINTENANCE_TRANSITIONS: Dict[MaintenanceStatus, Set[MaintenanceStatus]] = {
@@ -28,11 +29,13 @@ class MaintenanceService:
         self,
         maintenance_repository: AbstractMaintenanceRequestRepository,
         asset_repository: AbstractAssetRepository,
-        lifecycle_service: AssetLifecycleService
+        lifecycle_service: AssetLifecycleService,
+        notification_service=None
     ):
         self.maintenance_repo = maintenance_repository
         self.asset_repo = asset_repository
         self.lifecycle_service = lifecycle_service
+        self.notification_service = notification_service
 
     async def raise_request(
         self,
@@ -93,6 +96,8 @@ class MaintenanceService:
 
         updated = await self.maintenance_repo.update(req)
         business_logger.info(f"Maintenance request approved: ID {request_id}")
+        if self.notification_service:
+            await self.notification_service.notify(req.raised_by, NotificationType.MAINTENANCE_APPROVED, {"entity_id": req.id, "entity_type": "maintenance", "message": "Your maintenance request was approved."})
         return updated
 
     async def reject_request(self, request_id: str, rejected_by: str, reason: str) -> MaintenanceRequest:
@@ -115,6 +120,8 @@ class MaintenanceService:
 
         updated = await self.maintenance_repo.update(req)
         business_logger.info(f"Maintenance request rejected: ID {request_id}")
+        if self.notification_service:
+            await self.notification_service.notify(req.raised_by, NotificationType.MAINTENANCE_REJECTED, {"entity_id": req.id, "entity_type": "maintenance", "message": "Your maintenance request was rejected."})
         return updated
 
     async def assign_technician(self, request_id: str, technician_name: str, actor_id: str) -> MaintenanceRequest:

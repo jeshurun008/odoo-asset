@@ -256,3 +256,182 @@ async def test_rbac_booking_endpoints(client: AsyncClient):
     # 2. Booker's Department Head cancels -> Should succeed (200)
     res_ok = await client.patch(f"/api/v1/bookings/{booking_id}/cancel", json={"cancellation_reason": "Head override"}, headers=headers_head)
     assert res_ok.status_code == 200
+
+
+async def test_touching_boundary_booking_allowed(client: AsyncClient):
+    """Verify that touching but non-overlapping boundaries are allowed."""
+    data = await _seed_data(client)
+    headers = data["emp_headers"]
+
+    tomorrow = datetime.now(timezone.utc) + timedelta(days=1)
+    b1_start = tomorrow.replace(hour=9, minute=0, second=0, microsecond=0).isoformat()
+    b1_end = tomorrow.replace(hour=10, minute=0, second=0, microsecond=0).isoformat()
+
+    res1 = await client.post("/api/v1/bookings", json={
+        "asset_id": data["asset_bookable"].id,
+        "start_time": b1_start,
+        "end_time": b1_end
+    }, headers=headers)
+    assert res1.status_code == 201
+
+    # Touching boundary: starts exactly at 10:00 when first ends.
+    b2_start = tomorrow.replace(hour=10, minute=0, second=0, microsecond=0).isoformat()
+    b2_end = tomorrow.replace(hour=11, minute=0, second=0, microsecond=0).isoformat()
+
+    res2 = await client.post("/api/v1/bookings", json={
+        "asset_id": data["asset_bookable"].id,
+        "start_time": b2_start,
+        "end_time": b2_end
+    }, headers=headers)
+    assert res2.status_code == 201
+
+
+async def test_overlap_ignores_cancelled_bookings(client: AsyncClient):
+    """Verify that a cancelled booking does not block a new booking for the same slot."""
+    data = await _seed_data(client)
+    headers = data["emp_headers"]
+
+    tomorrow = datetime.now(timezone.utc) + timedelta(days=1)
+    b1_start = tomorrow.replace(hour=14, minute=0, second=0, microsecond=0).isoformat()
+    b1_end = tomorrow.replace(hour=15, minute=0, second=0, microsecond=0).isoformat()
+
+    res1 = await client.post("/api/v1/bookings", json={
+        "asset_id": data["asset_bookable"].id,
+        "start_time": b1_start,
+        "end_time": b1_end
+    }, headers=headers)
+    assert res1.status_code == 201
+    booking_id = res1.json()["data"]["id"]
+
+    # Cancel the booking
+    res_cancel = await client.patch(f"/api/v1/bookings/{booking_id}/cancel", json={
+        "cancellation_reason": "Change of plans"
+    }, headers=headers)
+    assert res_cancel.status_code == 200
+
+    # Book the exact same slot again
+    res2 = await client.post("/api/v1/bookings", json={
+        "asset_id": data["asset_bookable"].id,
+        "start_time": b1_start,
+        "end_time": b1_end
+    }, headers=headers)
+    assert res2.status_code == 201
+
+
+async def test_list_bookings_starting_within(client: AsyncClient):
+    """Verify list_bookings_starting_within retrieves only the correct bookings."""
+    data = await _seed_data(client)
+    headers = data["emp_headers"]
+
+    # Clear all bookings to have a clean state for starting_within check
+    booking_repository_instance._bookings.clear()
+
+    # Create additional bookable assets to prevent overlap conflicts
+    from app.domain.asset import Asset
+    cat_id = data["asset_bookable"].category_id
+    asset2 = Asset(
+        name="Conference Room B",
+        category_id=cat_id,
+        serial_number="ROOM-B",
+        acquisition_date="2026-07-12T00:00:00Z",
+        acquisition_cost=5000.0,
+        condition="NEW",
+        location="HQ - Floor 1",
+        is_bookable=True,
+        asset_tag="AF-0003"
+    )
+    await asset_repository_instance.create(asset2)
+
+    asset3 = Asset(
+        name="Conference Room C",
+        category_id=cat_id,
+        serial_number="ROOM-C",
+        acquisition_date="2026-07-12T00:00:00Z",
+        acquisition_cost=5000.0,
+        condition="NEW",
+        location="HQ - Floor 1",
+        is_bookable=True,
+        asset_tag="AF-0004"
+    )
+    await asset_repository_instance.create(asset3)
+
+    # 1. Booking starting in 15 mins (within 30 mins window)
+    start_within = (datetime.now(timezone.utc) + timedelta(minutes=15))
+    end_within = start_within + timedelta(hours=1)
+    await client.post("/api/v1/bookings", json={
+        "asset_id": data["asset_bookable"].id,
+        "start_time": start_within.isoformat(),
+        "end_time": end_within.isoformat()
+    }, headers=headers)
+
+    # 2. Booking starting in 45 mins (outside 30 mins window)
+    start_outside = (datetime.now(timezone.utc) + timedelta(minutes=45))
+    end_outside = start_outside + timedelta(hours=1)
+    await client.post("/api/v1/bookings", json={
+        "asset_id": asset2.id,
+        "start_time": start_outside.isoformat(),
+        "end_time": end_outside.isoformat()
+    }, headers=headers)
+
+    # 3. Booking starting in 10 mins but cancelled
+    start_cancelled = (datetime.now(timezone.utc) + timedelta(minutes=10))
+    end_cancelled = start_cancelled + timedelta(hours=1)
+    res_cancelled = await client.post("/api/v1/bookings", json={
+        "asset_id": asset3.id,
+        "start_time": start_cancelled.isoformat(),
+        "end_time": end_cancelled.isoformat()
+    }, headers=headers)
+    cancelled_id = res_cancelled.json()["data"]["id"]
+    await client.patch(f"/api/v1/bookings/{cancelled_id}/cancel", json={"cancellation_reason": "cancel"}, headers=headers)
+
+    # Fetch from repository directly to prove the repository method works
+    results = await booking_repository_instance.list_bookings_starting_within(30)
+    assert len(results) == 1
+    # Check start time is matching within
+    assert abs((results[0].start_time.replace(tzinfo=timezone.utc) - start_within).total_seconds()) < 5
+
+
+async def test_booking_lifecycle_status_computed(client: AsyncClient):
+    """Verify that computed_status behaves correctly across CANCELLED, UPCOMING, ONGOING, and COMPLETED states."""
+    data = await _seed_data(client)
+    from app.domain.booking import Booking
+
+    # 1. UPCOMING
+    b_upcoming = Booking(
+        asset_id=data["asset_bookable"].id,
+        booked_by=data["emp"].id,
+        start_time=datetime.now(timezone.utc) + timedelta(hours=1),
+        end_time=datetime.now(timezone.utc) + timedelta(hours=2)
+    )
+    assert b_upcoming.computed_status == "UPCOMING"
+
+    # 2. ONGOING
+    b_ongoing = Booking(
+        asset_id=data["asset_bookable"].id,
+        booked_by=data["emp"].id,
+        start_time=datetime.now(timezone.utc) - timedelta(minutes=30),
+        end_time=datetime.now(timezone.utc) + timedelta(minutes=30)
+    )
+    assert b_ongoing.computed_status == "ONGOING"
+
+    # 3. COMPLETED
+    b_completed = Booking(
+        asset_id=data["asset_bookable"].id,
+        booked_by=data["emp"].id,
+        start_time=datetime.now(timezone.utc) - timedelta(hours=2),
+        end_time=datetime.now(timezone.utc) - timedelta(hours=1)
+    )
+    assert b_completed.computed_status == "COMPLETED"
+
+    # 4. CANCELLED
+    b_cancelled = Booking(
+        asset_id=data["asset_bookable"].id,
+        booked_by=data["emp"].id,
+        start_time=datetime.now(timezone.utc) + timedelta(hours=1),
+        end_time=datetime.now(timezone.utc) + timedelta(hours=2),
+        cancelled_at=datetime.now(timezone.utc)
+    )
+    assert b_cancelled.computed_status == "CANCELLED"
+
+
+

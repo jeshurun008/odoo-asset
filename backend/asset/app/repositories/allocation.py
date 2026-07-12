@@ -1,5 +1,6 @@
 from abc import abstractmethod
 from typing import List
+from datetime import datetime
 from app.domain.allocation import AssetAllocation
 from app.repositories.base import AbstractRepository
 
@@ -21,3 +22,6 @@ class AbstractAssetAllocationRepository(AbstractRepository[AssetAllocation]):
     async def list_by_asset(self, asset_id: str) -> List[AssetAllocation]:
         """Fetch all allocations (both active and returned) for a specific asset ID."""
         pass
+
+    @abstractmethod
+    async def list_upcoming_returns(self, days: int) -> List[AssetAllocation]: pass

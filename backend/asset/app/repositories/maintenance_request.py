@@ -16,3 +16,9 @@ class AbstractMaintenanceRequestRepository(AbstractRepository[MaintenanceRequest
     async def list_active_today(self) -> List[MaintenanceRequest]:
         """Fetch all maintenance requests active or resolved/raised today (Dashboard feeds hook)."""
         pass
+
+    @abstractmethod
+    async def list_maintenance_today(self) -> List[MaintenanceRequest]:
+        """Fetch all requests raised today (excluding RESOLVED), or currently IN_PROGRESS/TECHNICIAN_ASSIGNED."""
+        pass
+

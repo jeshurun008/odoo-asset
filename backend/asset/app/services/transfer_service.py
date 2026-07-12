@@ -11,6 +11,7 @@ from app.repositories.asset import AbstractAssetRepository
 from app.repositories.user import AbstractUserRepository
 from app.repositories.department import AbstractDepartmentRepository
 from app.repositories.transfer_request import AbstractTransferRequestRepository
+from app.domain.notification import NotificationType
 
 
 class TransferService:
@@ -24,13 +25,15 @@ class TransferService:
         alloc_repository: AbstractAssetAllocationRepository,
         asset_repository: AbstractAssetRepository,
         user_repository: AbstractUserRepository,
-        dept_repository: AbstractDepartmentRepository
+        dept_repository: AbstractDepartmentRepository,
+        notification_service=None
     ):
         self.transfer_repo = transfer_repository
         self.alloc_repo = alloc_repository
         self.asset_repo = asset_repository
         self.user_repo = user_repository
         self.dept_repo = dept_repository
+        self.notification_service = notification_service
         self._lock = asyncio.Lock()
 
     async def create_transfer_request(
@@ -142,6 +145,8 @@ class TransferService:
             updated_req = await self.transfer_repo.update(req)
 
             business_logger.info(f"Transfer APPROVED and COMPLETED: Transfer ID {transfer_id}")
+            if self.notification_service and req.requested_to_type == "EMPLOYEE":
+                await self.notification_service.notify(req.requested_to_id, NotificationType.TRANSFER_APPROVED, {"entity_id": req.id, "entity_type": "transfer", "message": "Your asset transfer was approved."})
             return updated_req
 
     async def reject_transfer(self, transfer_id: str, resolver_id: str, reason: Optional[str] = None) -> TransferRequest:

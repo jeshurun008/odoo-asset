@@ -1,4 +1,5 @@
 import asyncio
+from datetime import datetime, timedelta, timezone
 from typing import Dict, List, Optional
 from app.domain.allocation import AssetAllocation
 from app.repositories.allocation import AbstractAssetAllocationRepository
@@ -93,3 +94,8 @@ class InMemoryAssetAllocationRepository(AbstractAssetAllocationRepository):
             allocs = [a for a in self._allocations.values() if a.asset_id == asset_id]
             allocs.sort(key=lambda a: a.allocated_at, reverse=True)
             return allocs
+
+    async def list_upcoming_returns(self, days: int):
+        async with self._lock:
+            now, end = datetime.now(timezone.utc), datetime.now(timezone.utc) + timedelta(days=days)
+            return [a for a in self._allocations.values() if a.returned_at is None and a.expected_return_date and now <= (a.expected_return_date.replace(tzinfo=timezone.utc) if a.expected_return_date.tzinfo is None else a.expected_return_date) <= end]

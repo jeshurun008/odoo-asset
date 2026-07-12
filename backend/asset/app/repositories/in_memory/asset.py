@@ -108,3 +108,12 @@ class InMemoryAssetRepository(AbstractAssetRepository):
                 if asset.category_id == category_id and asset.status not in (AssetStatus.RETIRED, AssetStatus.DISPOSED):
                     count += 1
             return count
+
+    async def count_by_status(self, department_id=None):
+        async with self._lock:
+            counts = {}
+            for asset in self._assets.values():
+                if department_id and asset.department_id != department_id:
+                    continue
+                counts[asset.status.value] = counts.get(asset.status.value, 0) + 1
+            return counts

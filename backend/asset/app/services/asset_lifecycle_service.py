@@ -44,8 +44,9 @@ class AssetLifecycleService:
     State Machine orchestrator managing Asset Status transitions, validation constraints,
     and history tracing.
     """
-    def __init__(self, asset_repository: AbstractAssetRepository):
+    def __init__(self, asset_repository: AbstractAssetRepository, activity_log_service=None):
         self.asset_repo = asset_repository
+        self.activity_log_service = activity_log_service
 
     async def transition_to(
         self,
@@ -79,4 +80,13 @@ class AssetLifecycleService:
             f"LIFECYCLE_TRANSITION: Actor '{actor_id}' transitioned asset '{asset.id}' ({asset.asset_tag}) "
             f"from '{current_status}' to '{target_status}'. Reason: '{reason or 'None provided'}'."
         )
+        if self.activity_log_service:
+            await self.activity_log_service.record(
+                user_id=actor_id,
+                action="ASSET_LIFECYCLE_TRANSITION",
+                entity_type="asset",
+                entity_id=asset.id,
+                previous_value={"status": current_status.value},
+                new_value={"status": target_status.value, "reason": reason},
+            )
         return updated_asset

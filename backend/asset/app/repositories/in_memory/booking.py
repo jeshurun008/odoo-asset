@@ -112,13 +112,9 @@ class InMemoryBookingRepository(AbstractBookingRepository):
     async def list_bookings_starting_within(self, minutes: int) -> List[Booking]:
         async with self._lock:
             now = datetime.now(timezone.utc)
-            future_limit = now + timedelta(minutes=minutes)
+            window_end = now + timedelta(minutes=minutes)
+            return [
+                b for b in self._bookings.values()
+                if b.cancelled_at is None and now <= (b.start_time.replace(tzinfo=timezone.utc) if b.start_time.tzinfo is None else b.start_time) <= window_end
+            ]
 
-            results = []
-            for b in self._bookings.values():
-                if b.computed_status != "UPCOMING":
-                    continue
-                b_start = b.start_time.replace(tzinfo=timezone.utc) if b.start_time.tzinfo is None else b.start_time
-                if now <= b_start <= future_limit:
-                    results.append(b)
-            return results

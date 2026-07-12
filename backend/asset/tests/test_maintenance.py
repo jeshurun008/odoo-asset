@@ -263,3 +263,154 @@ async def test_history_includes_maintenance(client: AsyncClient):
     history = response.json()["data"]
     assert len(history["maintenance_history"]) == 1
     assert history["maintenance_history"][0]["issue_description"] == "Clean camera lens"
+
+
+async def test_invalid_maintenance_transitions_rejected(client: AsyncClient):
+    """Verify invalid maintenance state transitions are rejected with ConflictException (409)."""
+    data = await _seed_data(client)
+    headers_emp = data["emp_headers"]
+    headers_admin = data["admin_headers"]
+    asset_id = data["asset"].id
+
+    # 1. PENDING -> TECHNICIAN_ASSIGNED (skipping APPROVED)
+    res1 = await client.post("/api/v1/maintenance-requests", json={
+        "asset_id": asset_id,
+        "issue_description": "First issue",
+        "priority": "LOW"
+    }, headers=headers_emp)
+    req1_id = res1.json()["data"]["id"]
+    res_assign_fail = await client.patch(
+        f"/api/v1/maintenance-requests/{req1_id}/assign-technician",
+        json={"assigned_technician": "Bob"},
+        headers=headers_admin
+    )
+    assert res_assign_fail.status_code == 409
+
+    # Reject req1 to clear it
+    await client.patch(f"/api/v1/maintenance-requests/{req1_id}/reject", json={"rejected_reason": "Clear"}, headers=headers_admin)
+
+    # 2. REJECTED -> APPROVED
+    res2 = await client.post("/api/v1/maintenance-requests", json={
+        "asset_id": asset_id,
+        "issue_description": "Second issue",
+        "priority": "LOW"
+    }, headers=headers_emp)
+    req2_id = res2.json()["data"]["id"]
+    # Reject first
+    await client.patch(f"/api/v1/maintenance-requests/{req2_id}/reject", json={"rejected_reason": "No bug"}, headers=headers_admin)
+    # Try to approve
+    res_approve_fail = await client.patch(f"/api/v1/maintenance-requests/{req2_id}/approve", headers=headers_admin)
+    assert res_approve_fail.status_code == 409
+
+    # 3. RESOLVED -> IN_PROGRESS
+    res3 = await client.post("/api/v1/maintenance-requests", json={
+        "asset_id": asset_id,
+        "issue_description": "Third issue",
+        "priority": "LOW"
+    }, headers=headers_emp)
+    req3_id = res3.json()["data"]["id"]
+    # Run through full workflow to RESOLVED
+    await client.patch(f"/api/v1/maintenance-requests/{req3_id}/approve", headers=headers_admin)
+    await client.patch(f"/api/v1/maintenance-requests/{req3_id}/assign-technician", json={"assigned_technician": "Bob"}, headers=headers_admin)
+    await client.patch(f"/api/v1/maintenance-requests/{req3_id}/start", headers=headers_admin)
+    await client.patch(f"/api/v1/maintenance-requests/{req3_id}/resolve", headers=headers_admin)
+    # Try to start work again
+    res_start_fail = await client.patch(f"/api/v1/maintenance-requests/{req3_id}/start", headers=headers_admin)
+    assert res_start_fail.status_code == 409
+
+
+async def test_list_maintenance_today(client: AsyncClient):
+    """Verify list_maintenance_today query correctly returns/excludes items per requirements."""
+    data = await _seed_data(client)
+    headers_emp = data["emp_headers"]
+    headers_admin = data["admin_headers"]
+    from datetime import datetime, timezone, timedelta
+
+    # Clean start
+    maintenance_request_repository_instance._requests.clear()
+
+    # Create additional assets
+    from app.domain.asset import Asset
+    cat_id = data["asset"].category_id
+    asset2 = Asset(
+        name="Asset 2",
+        category_id=cat_id,
+        serial_number="SN-2",
+        acquisition_date="2026-07-12T00:00:00Z",
+        acquisition_cost=999.99,
+        condition="GOOD",
+        location="Lobby",
+        asset_tag="AF-0003"
+    )
+    await asset_repository_instance.create(asset2)
+
+    asset3 = Asset(
+        name="Asset 3",
+        category_id=cat_id,
+        serial_number="SN-3",
+        acquisition_date="2026-07-12T00:00:00Z",
+        acquisition_cost=999.99,
+        condition="GOOD",
+        location="Lobby",
+        asset_tag="AF-0004"
+    )
+    await asset_repository_instance.create(asset3)
+
+    # 1. Raised today, PENDING -> Should be included
+    res1 = await client.post("/api/v1/maintenance-requests", json={
+        "asset_id": data["asset"].id,
+        "issue_description": "Raised today pending",
+        "priority": "MEDIUM"
+    }, headers=headers_emp)
+    req1_id = res1.json()["data"]["id"]
+
+    # 2. Raised today, but RESOLVED -> Should be excluded
+    res2 = await client.post("/api/v1/maintenance-requests", json={
+        "asset_id": asset2.id,
+        "issue_description": "Raised today resolved",
+        "priority": "LOW"
+    }, headers=headers_emp)
+    req2_id = res2.json()["data"]["id"]
+    # Transition to RESOLVED
+    await client.patch(f"/api/v1/maintenance-requests/{req2_id}/approve", headers=headers_admin)
+    await client.patch(f"/api/v1/maintenance-requests/{req2_id}/assign-technician", json={"assigned_technician": "Bob"}, headers=headers_admin)
+    await client.patch(f"/api/v1/maintenance-requests/{req2_id}/start", headers=headers_admin)
+    await client.patch(f"/api/v1/maintenance-requests/{req2_id}/resolve", headers=headers_admin)
+
+    # 3. Raised 2 days ago, currently IN_PROGRESS -> Should be included
+    res3 = await client.post("/api/v1/maintenance-requests", json={
+        "asset_id": asset3.id,
+        "issue_description": "Old request in progress",
+        "priority": "HIGH"
+    }, headers=headers_emp)
+    req3_id = res3.json()["data"]["id"]
+    # Transition to IN_PROGRESS
+    await client.patch(f"/api/v1/maintenance-requests/{req3_id}/approve", headers=headers_admin)
+    await client.patch(f"/api/v1/maintenance-requests/{req3_id}/assign-technician", json={"assigned_technician": "Bob"}, headers=headers_admin)
+    await client.patch(f"/api/v1/maintenance-requests/{req3_id}/start", headers=headers_admin)
+    # Manually backdate raised_at to 2 days ago
+    req3 = await maintenance_request_repository_instance.get_by_id(req3_id)
+    req3.raised_at = datetime.now(timezone.utc) - timedelta(days=2)
+    await maintenance_request_repository_instance.update(req3)
+
+    # Fetch from repository method to verify it works
+    results = await maintenance_request_repository_instance.list_maintenance_today()
+    assert len(results) == 2
+    # req1 and req3 should be in results
+    result_ids = {r.id for r in results}
+    assert req1_id in result_ids
+    assert req3_id in result_ids
+    assert req2_id not in result_ids
+
+    # Verify query parameter on the endpoint works
+    res_endpoint = await client.get("/api/v1/maintenance-requests?today=true", headers=headers_admin)
+    assert res_endpoint.status_code == 200
+    items = res_endpoint.json()["data"]["items"]
+    # We should get exactly 2 items
+    assert len(items) == 2
+    item_ids = {i["id"] for i in items}
+    assert req1_id in item_ids
+    assert req3_id in item_ids
+    assert req2_id not in item_ids
+
+

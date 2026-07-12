@@ -61,7 +61,7 @@ async def list_maintenance_requests(
     asset_id: Optional[str] = Query(default=None),
     status_filter: Optional[str] = Query(default=None, alias="status"),
     priority: Optional[str] = Query(default=None),
-    maintenance_today: Optional[bool] = Query(default=None),
+    maintenance_today: Optional[bool] = Query(default=None, alias="today"),
     current_user: User = Depends(get_current_user),
     maintenance_repo: AbstractMaintenanceRequestRepository = Depends(get_maintenance_request_repository)
 ) -> SuccessResponse[PaginatedResponse[MaintenanceRequestResponse]]:

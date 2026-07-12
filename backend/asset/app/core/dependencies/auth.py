@@ -13,6 +13,12 @@ from app.repositories.in_memory.allocation import InMemoryAssetAllocationReposit
 from app.repositories.in_memory.transfer_request import InMemoryTransferRequestRepository
 from app.repositories.in_memory.booking import InMemoryBookingRepository
 from app.repositories.in_memory.maintenance_request import InMemoryMaintenanceRequestRepository
+from app.repositories.in_memory.audit import InMemoryAuditRepository
+from app.repositories.in_memory.notification import InMemoryNotificationRepository
+from app.repositories.in_memory.activity_log import InMemoryActivityLogRepository
+from app.repositories.audit import AbstractAuditRepository
+from app.repositories.notification import AbstractNotificationRepository
+from app.repositories.activity_log import AbstractActivityLogRepository
 from app.repositories.token_store import AbstractTokenStore
 from app.repositories.user import AbstractUserRepository
 from app.repositories.login_history import AbstractLoginAttemptRepository
@@ -33,6 +39,11 @@ from app.services.allocation_service import AllocationService
 from app.services.transfer_service import TransferService
 from app.services.booking_service import BookingService
 from app.services.maintenance_service import MaintenanceService
+from app.services.audit_service import AuditService
+from app.services.dashboard_service import DashboardService
+from app.services.report_service import ReportService
+from app.services.notification_service import InAppChannel, NotificationService
+from app.services.activity_log_service import ActivityLogService
 
 # Singletons representing in-memory tables for persistence
 user_repository_instance = InMemoryUserRepository()
@@ -45,6 +56,9 @@ allocation_repository_instance = InMemoryAssetAllocationRepository()
 transfer_request_repository_instance = InMemoryTransferRequestRepository()
 booking_repository_instance = InMemoryBookingRepository()
 maintenance_request_repository_instance = InMemoryMaintenanceRequestRepository()
+audit_repository_instance = InMemoryAuditRepository()
+notification_repository_instance = InMemoryNotificationRepository()
+activity_log_repository_instance = InMemoryActivityLogRepository()
 
 
 def get_user_repository() -> AbstractUserRepository:
@@ -95,6 +109,18 @@ def get_booking_repository() -> AbstractBookingRepository:
 def get_maintenance_request_repository() -> AbstractMaintenanceRequestRepository:
     """Dependency injector for Maintenance Request Repository."""
     return maintenance_request_repository_instance
+def get_audit_repository() -> AbstractAuditRepository: return audit_repository_instance
+def get_notification_repository() -> AbstractNotificationRepository: return notification_repository_instance
+def get_activity_log_repository() -> AbstractActivityLogRepository: return activity_log_repository_instance
+def get_activity_log_service() -> ActivityLogService: return ActivityLogService(activity_log_repository_instance)
+def get_notification_service() -> NotificationService:
+    return NotificationService(InAppChannel(notification_repository_instance), booking_repository_instance)
+def get_audit_service() -> AuditService:
+    return AuditService(audit_repository_instance, asset_repository_instance, AssetLifecycleService(asset_repository_instance, get_activity_log_service()), get_notification_service())
+def get_dashboard_service() -> DashboardService:
+    return DashboardService(asset_repository_instance, maintenance_request_repository_instance, booking_repository_instance, transfer_request_repository_instance, allocation_repository_instance, notification_repository_instance)
+def get_report_service() -> ReportService:
+    return ReportService(asset_repository_instance, allocation_repository_instance, booking_repository_instance, maintenance_request_repository_instance, audit_repository_instance)
 
 
 def get_auth_service(
@@ -134,7 +160,7 @@ def get_asset_lifecycle_service(
     asset_repo: AbstractAssetRepository = Depends(get_asset_repository)
 ) -> AssetLifecycleService:
     """Dependency injector for Asset Lifecycle State Machine Service."""
-    return AssetLifecycleService(asset_repo)
+    return AssetLifecycleService(asset_repo, get_activity_log_service())
 
 
 def get_asset_service(
@@ -156,7 +182,7 @@ def get_allocation_service(
     lifecycle_service: AssetLifecycleService = Depends(get_asset_lifecycle_service)
 ) -> AllocationService:
     """Dependency injector for Asset Allocation Service."""
-    return AllocationService(alloc_repo, asset_repo, user_repo, dept_repo, lifecycle_service)
+    return AllocationService(alloc_repo, asset_repo, user_repo, dept_repo, lifecycle_service, get_notification_service())
 
 
 def get_transfer_service(
@@ -167,7 +193,7 @@ def get_transfer_service(
     dept_repo: AbstractDepartmentRepository = Depends(get_department_repository)
 ) -> TransferService:
     """Dependency injector for Asset Transfer Service."""
-    return TransferService(transfer_repo, alloc_repo, asset_repo, user_repo, dept_repo)
+    return TransferService(transfer_repo, alloc_repo, asset_repo, user_repo, dept_repo, get_notification_service())
 
 
 def get_booking_service(
@@ -185,7 +211,7 @@ def get_maintenance_service(
     lifecycle_service: AssetLifecycleService = Depends(get_asset_lifecycle_service)
 ) -> MaintenanceService:
     """Dependency injector for Maintenance Service."""
-    return MaintenanceService(maintenance_repo, asset_repo, lifecycle_service)
+    return MaintenanceService(maintenance_repo, asset_repo, lifecycle_service, get_notification_service())
 
 
 # OAuth2 password bearer configuration pointing to the login path
