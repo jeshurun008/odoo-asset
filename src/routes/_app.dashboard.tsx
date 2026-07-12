@@ -1,15 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
-  Package,
   UserCheck,
-  Wrench,
-  ArrowLeftRight,
   CalendarClock,
   ClipboardCheck,
   ArrowRight,
 } from "lucide-react";
-import MetricCard from "@/components/shell/MetricCard";
 import { MovementChart } from "@/components/shell/MovementChart";
+import { DashboardMetrics } from "@/components/dashboard/DashboardMetrics";
 
 export const Route = createFileRoute("/_app/dashboard")({
   component: Dashboard,
@@ -52,46 +49,7 @@ function Dashboard() {
         </Link>
       </header>
 
-      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
-        <MetricCard
-          icon={Package}
-          label="Assets tracked"
-          value="2,481"
-          delta="+38 wk"
-          deltaVariant="neutral"
-          href="/assets"
-          hrefLabel="Browse inventory"
-        />
-        <MetricCard
-          icon={UserCheck}
-          label="Active allocations"
-          value="1,904"
-          delta="76% utilization"
-          deltaVariant="info"
-          href="/allocations"
-          hrefLabel="View allocations"
-          tone="alt"
-        />
-        <MetricCard
-          icon={ArrowLeftRight}
-          label="Transfers in flight"
-          value="17"
-          delta="4 overdue"
-          deltaVariant="warning"
-          href="/transfers"
-          hrefLabel="Open transfers"
-        />
-        <MetricCard
-          icon={Wrench}
-          label="Maintenance due"
-          value="12"
-          delta="2 today"
-          deltaVariant="warning"
-          href="/maintenance"
-          hrefLabel="Schedule work"
-          tone="alt"
-        />
-      </section>
+      <DashboardMetrics />
 
       <section className="grid grid-cols-1 lg:grid-cols-3 gap-3 md:gap-4">
         <div className="lg:col-span-2 rounded-xl bg-surface border border-white/[0.06] p-5 md:p-6">

@@ -148,7 +148,7 @@ export default function Hero() {
             </button>
 
             <Link
-              to="/dashboard"
+              to="/login"
               className="rounded-full px-4 py-2 font-medium text-white transition-colors"
               style={{ backgroundColor: "var(--af-active)" }}
               onMouseEnter={(e) =>
