@@ -109,8 +109,14 @@ export default function Sidebar({ activeHref = "/dashboard" }: { activeHref?: st
       </div>
 
       <div
-        className="rounded-2xl bg-white p-4"
-        style={{ boxShadow: "var(--af-shadow-card)" }}
+        className="rounded-2xl p-4"
+        style={{
+          backgroundColor: "var(--af-surface)",
+          backdropFilter: "var(--af-blur-glass)",
+          WebkitBackdropFilter: "var(--af-blur-glass)",
+          border: "1px solid var(--af-border)",
+          boxShadow: "var(--af-shadow-card)",
+        }}
       >
         <p className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: "var(--af-text-muted)" }}>
           Plan

@@ -1,6 +1,6 @@
 import { Outlet, createFileRoute } from "@tanstack/react-router";
-import { Sidebar } from "@/components/shell/Sidebar";
-import { Topbar } from "@/components/shell/Topbar";
+import Sidebar from "@/components/shell/Sidebar";
+import Topbar from "@/components/shell/Topbar";
 
 export const Route = createFileRoute("/_app")({
   component: AppShell,

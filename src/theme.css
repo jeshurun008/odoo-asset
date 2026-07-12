@@ -3,15 +3,15 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
 :root {
-  --af-bg: #EEF2EA;           /* app background, warm sage off-white */
-  --af-bg-elevated: #E4EBE0;  /* sidebar / recessed panel tint */
-  --af-surface: #FFFFFF;      /* cards, panels */
-  --af-text-primary: #1A1A1A;
-  --af-text-secondary: #6B7280;   /* gray-500 */
-  --af-text-muted: #9CA3AF;       /* gray-400 */
-  --af-active: #111111;           /* black pill — active nav, primary buttons */
+  --af-bg: transparent;                          /* shader shows through, no flat bg needed */
+  --af-bg-elevated: rgba(255, 255, 255, 0.04);   /* sidebar — dark glass, was light sage */
+  --af-surface: rgba(255, 255, 255, 0.06);       /* cards/panels — dark glass, was white */
+  --af-text-primary: #F5F5F5;
+  --af-text-secondary: #B8BEC7;
+  --af-text-muted: #7C838F;
+  --af-active: #111111;
   --af-active-hover: #2A2A2A;
-  --af-border: #E5E7EB;
+  --af-border: rgba(255, 255, 255, 0.10);        /* was flat light gray */
 
   /* status chip tints — pastel bg + darker text of same hue */
   --af-mint-bg: #DFF3E3;
@@ -25,11 +25,12 @@
 
   --af-radius-card: 20px;
   --af-radius-pill: 999px;
-  --af-shadow-card: 0 1px 2px rgba(16,24,10,0.04), 0 4px 16px rgba(16,24,10,0.06);
+  --af-shadow-card: 0 4px 24px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  --af-blur-glass: blur(16px);
 }
 
 body {
   font-family: 'Inter', system-ui, sans-serif;
-  background: var(--af-bg);
+  background: transparent;
   color: var(--af-text-primary);
 }

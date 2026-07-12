@@ -41,12 +41,19 @@ export default function ShaderBackground() {
         width={size.width}
         height={size.height}
         colorFront="#ffffff"
-        colorMid="#47a6ff"
-        colorBack="#111111"
-        brightness={0.05}
-        contrast={0.3}
+        colorMid="#8a8a8a"
+        colorBack="#0a0a0a"
+        brightness={0.03}
+        contrast={0.2}
         speed={reducedMotion ? 0 : 1}
         fit="cover"
+      />
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          backgroundColor: "rgba(0,0,0,0.4)",
+        }}
       />
     </div>
   );

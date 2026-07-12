@@ -8,7 +8,7 @@ import {
   ClipboardCheck,
   ArrowRight,
 } from "lucide-react";
-import { MetricCard } from "@/components/shell/MetricCard";
+import MetricCard from "@/components/shell/MetricCard";
 import { MovementChart } from "@/components/shell/MovementChart";
 
 export const Route = createFileRoute("/_app/dashboard")({

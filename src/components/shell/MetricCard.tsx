@@ -38,8 +38,14 @@ export default function MetricCard({
 }: MetricCardProps) {
   return (
     <div
-      className="rounded-[20px] bg-white p-5"
-      style={{ boxShadow: "var(--af-shadow-card)" }}
+      className="rounded-[20px] p-5"
+      style={{
+        backgroundColor: "var(--af-surface)",
+        backdropFilter: "var(--af-blur-glass)",
+        WebkitBackdropFilter: "var(--af-blur-glass)",
+        border: "1px solid var(--af-border)",
+        boxShadow: "var(--af-shadow-card)",
+      }}
     >
       <div className="mb-4 flex items-center justify-between">
         <div
