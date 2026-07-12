@@ -8,7 +8,7 @@ export const Route = createFileRoute("/_app")({
 
 function AppShell() {
   return (
-    <div className="min-h-screen bg-background text-foreground flex">
+    <div className="min-h-screen text-foreground flex">
       <Sidebar />
       <div className="flex-1 min-w-0 flex flex-col">
         <Topbar />
