@@ -11,7 +11,7 @@ import {
 import { MetricCard } from "@/components/shell/MetricCard";
 import { MovementChart } from "@/components/shell/MovementChart";
 
-export const Route = createFileRoute("/_app/")({
+export const Route = createFileRoute("/_app/dashboard")({
   component: Dashboard,
   head: () => ({
     meta: [

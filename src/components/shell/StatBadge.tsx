@@ -1,30 +1,25 @@
-type Variant = "neutral" | "warning" | "info";
+type BadgeVariant = "mint" | "sky" | "peach" | "lilac";
 
-const styles: Record<Variant, string> = {
-  neutral:
-    "text-muted-foreground border-white/[0.08] bg-transparent",
-  warning:
-    "text-amber-300/90 border-amber-300/25 bg-amber-300/[0.06]",
-  info:
-    "text-sky-300/90 border-sky-300/25 bg-sky-300/[0.06]",
+interface StatBadgeProps {
+  label: string;
+  variant?: BadgeVariant;
+}
+
+const variantStyles: Record<BadgeVariant, { bg: string; text: string }> = {
+  mint: { bg: "var(--af-mint-bg)", text: "var(--af-mint-text)" },
+  sky: { bg: "var(--af-sky-bg)", text: "var(--af-sky-text)" },
+  peach: { bg: "var(--af-peach-bg)", text: "var(--af-peach-text)" },
+  lilac: { bg: "var(--af-lilac-bg)", text: "var(--af-lilac-text)" },
 };
 
-export function StatBadge({
-  children,
-  variant = "neutral",
-}: {
-  children: React.ReactNode;
-  variant?: Variant;
-}) {
+export default function StatBadge({ label, variant = "sky" }: StatBadgeProps) {
+  const { bg, text } = variantStyles[variant];
   return (
     <span
-      className={[
-        "inline-flex items-center rounded-full border px-2 py-0.5",
-        "text-[10px] uppercase tracking-widest tabular-nums",
-        styles[variant],
-      ].join(" ")}
+      className="inline-flex items-center rounded-full px-3 py-1 text-xs font-medium"
+      style={{ backgroundColor: bg, color: text }}
     >
-      {children}
+      {label}
     </span>
   );
 }

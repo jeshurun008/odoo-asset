@@ -1,60 +1,74 @@
-import { Link } from "@tanstack/react-router";
-import { ArrowRight, type LucideIcon } from "lucide-react";
-import { StatBadge } from "./StatBadge";
+import type { LucideIcon } from "lucide-react";
+import StatBadge from "./StatBadge";
 
-type BadgeVariant = "neutral" | "warning" | "info";
-
-type Props = {
+interface MetricCardProps {
   icon: LucideIcon;
-  label: string;
+  iconTint?: "mint" | "sky" | "peach" | "lilac";
   value: string;
-  delta?: string;
-  deltaVariant?: BadgeVariant;
-  href?: string;
-  hrefLabel?: string;
-  tone?: "default" | "alt";
+  label: string;
+  badgeLabel?: string;
+  badgeVariant?: "mint" | "sky" | "peach" | "lilac";
+  linkLabel?: string;
+  onLinkClick?: () => void;
+}
+
+const tintBg: Record<string, string> = {
+  mint: "var(--af-mint-bg)",
+  sky: "var(--af-sky-bg)",
+  peach: "var(--af-peach-bg)",
+  lilac: "var(--af-lilac-bg)",
 };
 
-export function MetricCard({
+const tintText: Record<string, string> = {
+  mint: "var(--af-mint-text)",
+  sky: "var(--af-sky-text)",
+  peach: "var(--af-peach-text)",
+  lilac: "var(--af-lilac-text)",
+};
+
+export default function MetricCard({
   icon: Icon,
-  label,
+  iconTint = "sky",
   value,
-  delta,
-  deltaVariant = "neutral",
-  href,
-  hrefLabel = "Open module",
-  tone = "default",
-}: Props) {
+  label,
+  badgeLabel,
+  badgeVariant = "mint",
+  linkLabel,
+  onLinkClick,
+}: MetricCardProps) {
   return (
     <div
-      className={[
-        "group rounded-xl p-5 flex flex-col justify-between min-h-[168px] border border-white/[0.06] hover:border-white/10 transition-colors duration-150",
-        tone === "alt" ? "bg-surface-alt" : "bg-surface",
-      ].join(" ")}
+      className="rounded-[20px] bg-white p-5"
+      style={{ boxShadow: "var(--af-shadow-card)" }}
     >
-      <div className="flex items-start justify-between">
-        <div className="h-8 w-8 rounded-lg border border-white/10 flex items-center justify-center text-primary/80">
-          <Icon size={16} strokeWidth={1.75} />
-        </div>
-        {delta && <StatBadge variant={deltaVariant}>{delta}</StatBadge>}
-      </div>
-      <div className="mt-6">
-        <div className="text-3xl md:text-4xl font-bold text-primary leading-none tabular-nums">
-          {value}
-        </div>
-        <div className="mt-2 text-xs text-muted-foreground">{label}</div>
-      </div>
-      {href && (
-        <Link
-          to={href}
-          className="mt-4 inline-flex items-center gap-1.5 text-xs text-primary/90 hover:text-primary transition-[gap,color] duration-150 hover:gap-2.5"
+      <div className="mb-4 flex items-center justify-between">
+        <div
+          className="flex h-9 w-9 items-center justify-center rounded-full"
+          style={{ backgroundColor: tintBg[iconTint] }}
         >
-          {hrefLabel}
-          <ArrowRight
-            size={14}
-            className="transition-transform duration-150 group-hover:-rotate-45"
-          />
-        </Link>
+          <Icon size={18} style={{ color: tintText[iconTint] }} />
+        </div>
+        {badgeLabel && <StatBadge label={badgeLabel} variant={badgeVariant} />}
+      </div>
+
+      <p className="text-3xl font-semibold" style={{ color: "var(--af-text-primary)" }}>
+        {value}
+      </p>
+      <p className="mb-3 text-sm" style={{ color: "var(--af-text-secondary)" }}>
+        {label}
+      </p>
+
+      {linkLabel && (
+        <button
+          onClick={onLinkClick}
+          className="flex items-center gap-1 text-sm font-medium transition-colors hover:opacity-70"
+          style={{ color: "var(--af-text-primary)" }}
+        >
+          {linkLabel}
+          <span className="inline-block -rotate-45 transition-transform group-hover:translate-x-0.5">
+            →
+          </span>
+        </button>
       )}
     </div>
   );

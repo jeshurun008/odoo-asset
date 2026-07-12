@@ -1,116 +1,123 @@
-import { Link, useRouterState } from "@tanstack/react-router";
+import { useState } from "react";
 import {
-  LayoutDashboard,
+  LayoutGrid,
   Building2,
   Package,
-  UserCheck,
+  Users,
   ArrowLeftRight,
-  CalendarClock,
+  Calendar,
   Wrench,
   ClipboardCheck,
   BarChart3,
   Settings,
-  type LucideIcon,
 } from "lucide-react";
 
-type NavItem = { to: string; label: string; icon: LucideIcon };
-type NavGroup = { label: string; items: NavItem[] };
+interface NavItem {
+  label: string;
+  icon: typeof LayoutGrid;
+  href: string;
+}
 
-const groups: NavGroup[] = [
-  {
-    label: "Overview",
-    items: [{ to: "/", label: "Dashboard", icon: LayoutDashboard }],
-  },
-  {
-    label: "Inventory",
-    items: [
-      { to: "/organization", label: "Organization", icon: Building2 },
-      { to: "/assets", label: "Assets", icon: Package },
-      { to: "/allocations", label: "Allocations", icon: UserCheck },
-      { to: "/transfers", label: "Transfers", icon: ArrowLeftRight },
-    ],
-  },
-  {
-    label: "Operations",
-    items: [
-      { to: "/bookings", label: "Bookings", icon: CalendarClock },
-      { to: "/maintenance", label: "Maintenance", icon: Wrench },
-      { to: "/audits", label: "Audits", icon: ClipboardCheck },
-    ],
-  },
-  {
-    label: "Insights",
-    items: [
-      { to: "/reports", label: "Reports", icon: BarChart3 },
-      { to: "/settings", label: "Settings", icon: Settings },
-    ],
-  },
+const overview: NavItem[] = [{ label: "Dashboard", icon: LayoutGrid, href: "/dashboard" }];
+
+const inventory: NavItem[] = [
+  { label: "Organization", icon: Building2, href: "/dashboard/organization" },
+  { label: "Assets", icon: Package, href: "/dashboard/assets" },
+  { label: "Allocations", icon: Users, href: "/dashboard/allocations" },
+  { label: "Transfers", icon: ArrowLeftRight, href: "/dashboard/transfers" },
 ];
 
-export function Sidebar() {
-  const pathname = useRouterState({ select: (s) => s.location.pathname });
+const operations: NavItem[] = [
+  { label: "Bookings", icon: Calendar, href: "/dashboard/bookings" },
+  { label: "Maintenance", icon: Wrench, href: "/dashboard/maintenance" },
+  { label: "Audits", icon: ClipboardCheck, href: "/dashboard/audits" },
+];
 
+const insights: NavItem[] = [
+  { label: "Reports", icon: BarChart3, href: "/dashboard/reports" },
+  { label: "Settings", icon: Settings, href: "/dashboard/settings" },
+];
+
+function NavGroup({
+  title,
+  items,
+  activeHref,
+}: {
+  title: string;
+  items: NavItem[];
+  activeHref: string;
+}) {
   return (
-    <aside className="hidden md:flex md:w-60 lg:w-64 shrink-0 flex-col bg-sidebar text-sidebar-foreground bg-noise-subtle">
-      <div className="px-6 pt-6 pb-8">
-        <Link to="/" className="flex items-center gap-2">
-          <div className="h-8 w-8 rounded-lg bg-surface flex items-center justify-center">
-            <span className="font-serif-italic text-primary text-lg leading-none">A</span>
-          </div>
-          <div className="leading-tight">
-            <div className="text-sm font-bold text-primary tracking-tight">AssetFlow</div>
-            <div className="text-[10px] uppercase tracking-widest text-muted-foreground">
-              Ops workspace
-            </div>
-          </div>
-        </Link>
+    <div className="mb-6">
+      <p
+        className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-wide"
+        style={{ color: "var(--af-text-muted)" }}
+      >
+        {title}
+      </p>
+      <div className="flex flex-col gap-1">
+        {items.map((item) => {
+          const isActive = item.href === activeHref;
+          return (
+            <a
+              key={item.href}
+              href={item.href}
+              className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition-colors"
+              style={{
+                backgroundColor: isActive ? "var(--af-active)" : "transparent",
+                color: isActive ? "#FFFFFF" : "var(--af-text-primary)",
+              }}
+            >
+              <item.icon size={18} />
+              {item.label}
+            </a>
+          );
+        })}
       </div>
+    </div>
+  );
+}
 
-      <nav className="flex-1 overflow-y-auto px-3 pb-6 space-y-6">
-        {groups.map((group) => (
-          <div key={group.label}>
-            <div className="px-3 mb-2 text-[10px] uppercase tracking-widest text-muted-foreground">
-              {group.label}
-            </div>
-            <ul className="space-y-1">
-              {group.items.map((item) => {
-                const active =
-                  item.to === "/"
-                    ? pathname === "/"
-                    : pathname === item.to || pathname.startsWith(item.to + "/");
-                const Icon = item.icon;
-                return (
-                  <li key={item.to}>
-                    <Link
-                      to={item.to}
-                      className={[
-                        "group flex items-center gap-3 rounded-xl px-3 py-2 text-sm transition-colors duration-150",
-                        active
-                          ? "bg-surface text-primary border border-white/10"
-                          : "text-brand-cream-soft hover:text-primary hover:bg-surface/60 border border-transparent",
-                      ].join(" ")}
-                    >
-                      <Icon size={18} strokeWidth={1.75} />
-                      <span className="truncate">{item.label}</span>
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
+export default function Sidebar({ activeHref = "/dashboard" }: { activeHref?: string }) {
+  return (
+    <aside
+      className="flex h-screen w-64 flex-col justify-between p-4"
+      style={{ backgroundColor: "var(--af-bg-elevated)" }}
+    >
+      <div>
+        <div className="mb-8 flex items-center gap-2 px-2 py-2">
+          <div
+            className="flex h-8 w-8 items-center justify-center rounded-full font-semibold"
+            style={{ backgroundColor: "var(--af-active)", color: "#fff" }}
+          >
+            A
           </div>
-        ))}
-      </nav>
-
-      <div className="px-4 pb-6">
-        <div className="rounded-xl bg-surface p-4">
-          <div className="text-[10px] uppercase tracking-widest text-muted-foreground mb-1">
-            Plan
-          </div>
-          <div className="text-sm text-primary font-bold">Operations · Team</div>
-          <div className="mt-2 text-xs text-muted-foreground">
-            <span className="font-serif-italic text-primary">2,481</span> assets tracked
+          <div>
+            <p className="text-sm font-semibold" style={{ color: "var(--af-text-primary)" }}>
+              AssetFlow
+            </p>
+            <p className="text-[10px]" style={{ color: "var(--af-text-muted)" }}>
+              OPS WORKSPACE
+            </p>
           </div>
         </div>
+
+        <NavGroup title="Overview" items={overview} activeHref={activeHref} />
+        <NavGroup title="Inventory" items={inventory} activeHref={activeHref} />
+        <NavGroup title="Operations" items={operations} activeHref={activeHref} />
+        <NavGroup title="Insights" items={insights} activeHref={activeHref} />
+      </div>
+
+      <div
+        className="rounded-2xl bg-white p-4"
+        style={{ boxShadow: "var(--af-shadow-card)" }}
+      >
+        <p className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: "var(--af-text-muted)" }}>
+          Plan
+        </p>
+        <p className="text-sm font-semibold" style={{ color: "var(--af-text-primary)" }}>
+          Operations · Team
+        </p>
       </div>
     </aside>
   );

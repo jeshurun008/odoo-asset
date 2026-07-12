@@ -10,12 +10,13 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as AppRouteImport } from './routes/_app'
-import { Route as AppIndexRouteImport } from './routes/_app.index'
+import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppTransfersRouteImport } from './routes/_app.transfers'
 import { Route as AppSettingsRouteImport } from './routes/_app.settings'
 import { Route as AppReportsRouteImport } from './routes/_app.reports'
 import { Route as AppOrganizationRouteImport } from './routes/_app.organization'
 import { Route as AppMaintenanceRouteImport } from './routes/_app.maintenance'
+import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
 import { Route as AppBookingsRouteImport } from './routes/_app.bookings'
 import { Route as AppAuditsRouteImport } from './routes/_app.audits'
 import { Route as AppAssetsRouteImport } from './routes/_app.assets'
@@ -25,10 +26,10 @@ const AppRoute = AppRouteImport.update({
   id: '/_app',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AppIndexRoute = AppIndexRouteImport.update({
+const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => AppRoute,
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AppTransfersRoute = AppTransfersRouteImport.update({
   id: '/transfers',
@@ -55,6 +56,11 @@ const AppMaintenanceRoute = AppMaintenanceRouteImport.update({
   path: '/maintenance',
   getParentRoute: () => AppRoute,
 } as any)
+const AppDashboardRoute = AppDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppBookingsRoute = AppBookingsRouteImport.update({
   id: '/bookings',
   path: '/bookings',
@@ -77,11 +83,12 @@ const AppAllocationsRoute = AppAllocationsRouteImport.update({
 } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof AppIndexRoute
+  '/': typeof IndexRoute
   '/allocations': typeof AppAllocationsRoute
   '/assets': typeof AppAssetsRoute
   '/audits': typeof AppAuditsRoute
   '/bookings': typeof AppBookingsRoute
+  '/dashboard': typeof AppDashboardRoute
   '/maintenance': typeof AppMaintenanceRoute
   '/organization': typeof AppOrganizationRoute
   '/reports': typeof AppReportsRoute
@@ -89,30 +96,32 @@ export interface FileRoutesByFullPath {
   '/transfers': typeof AppTransfersRoute
 }
 export interface FileRoutesByTo {
+  '/': typeof IndexRoute
   '/allocations': typeof AppAllocationsRoute
   '/assets': typeof AppAssetsRoute
   '/audits': typeof AppAuditsRoute
   '/bookings': typeof AppBookingsRoute
+  '/dashboard': typeof AppDashboardRoute
   '/maintenance': typeof AppMaintenanceRoute
   '/organization': typeof AppOrganizationRoute
   '/reports': typeof AppReportsRoute
   '/settings': typeof AppSettingsRoute
   '/transfers': typeof AppTransfersRoute
-  '/': typeof AppIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
+  '/': typeof IndexRoute
   '/_app': typeof AppRouteWithChildren
   '/_app/allocations': typeof AppAllocationsRoute
   '/_app/assets': typeof AppAssetsRoute
   '/_app/audits': typeof AppAuditsRoute
   '/_app/bookings': typeof AppBookingsRoute
+  '/_app/dashboard': typeof AppDashboardRoute
   '/_app/maintenance': typeof AppMaintenanceRoute
   '/_app/organization': typeof AppOrganizationRoute
   '/_app/reports': typeof AppReportsRoute
   '/_app/settings': typeof AppSettingsRoute
   '/_app/transfers': typeof AppTransfersRoute
-  '/_app/': typeof AppIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -122,6 +131,7 @@ export interface FileRouteTypes {
     | '/assets'
     | '/audits'
     | '/bookings'
+    | '/dashboard'
     | '/maintenance'
     | '/organization'
     | '/reports'
@@ -129,32 +139,35 @@ export interface FileRouteTypes {
     | '/transfers'
   fileRoutesByTo: FileRoutesByTo
   to:
+    | '/'
     | '/allocations'
     | '/assets'
     | '/audits'
     | '/bookings'
+    | '/dashboard'
     | '/maintenance'
     | '/organization'
     | '/reports'
     | '/settings'
     | '/transfers'
-    | '/'
   id:
     | '__root__'
+    | '/'
     | '/_app'
     | '/_app/allocations'
     | '/_app/assets'
     | '/_app/audits'
     | '/_app/bookings'
+    | '/_app/dashboard'
     | '/_app/maintenance'
     | '/_app/organization'
     | '/_app/reports'
     | '/_app/settings'
     | '/_app/transfers'
-    | '/_app/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
+  IndexRoute: typeof IndexRoute
   AppRoute: typeof AppRouteWithChildren
 }
 
@@ -167,12 +180,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_app/': {
-      id: '/_app/'
+    '/': {
+      id: '/'
       path: '/'
       fullPath: '/'
-      preLoaderRoute: typeof AppIndexRouteImport
-      parentRoute: typeof AppRoute
+      preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/_app/transfers': {
       id: '/_app/transfers'
@@ -207,6 +220,13 @@ declare module '@tanstack/react-router' {
       path: '/maintenance'
       fullPath: '/maintenance'
       preLoaderRoute: typeof AppMaintenanceRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/dashboard': {
+      id: '/_app/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof AppDashboardRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/bookings': {
@@ -245,12 +265,12 @@ interface AppRouteChildren {
   AppAssetsRoute: typeof AppAssetsRoute
   AppAuditsRoute: typeof AppAuditsRoute
   AppBookingsRoute: typeof AppBookingsRoute
+  AppDashboardRoute: typeof AppDashboardRoute
   AppMaintenanceRoute: typeof AppMaintenanceRoute
   AppOrganizationRoute: typeof AppOrganizationRoute
   AppReportsRoute: typeof AppReportsRoute
   AppSettingsRoute: typeof AppSettingsRoute
   AppTransfersRoute: typeof AppTransfersRoute
-  AppIndexRoute: typeof AppIndexRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
@@ -258,17 +278,18 @@ const AppRouteChildren: AppRouteChildren = {
   AppAssetsRoute: AppAssetsRoute,
   AppAuditsRoute: AppAuditsRoute,
   AppBookingsRoute: AppBookingsRoute,
+  AppDashboardRoute: AppDashboardRoute,
   AppMaintenanceRoute: AppMaintenanceRoute,
   AppOrganizationRoute: AppOrganizationRoute,
   AppReportsRoute: AppReportsRoute,
   AppSettingsRoute: AppSettingsRoute,
   AppTransfersRoute: AppTransfersRoute,
-  AppIndexRoute: AppIndexRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
+  IndexRoute: IndexRoute,
   AppRoute: AppRouteWithChildren,
 }
 export const routeTree = rootRouteImport
