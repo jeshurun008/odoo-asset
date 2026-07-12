@@ -1,4 +1,7 @@
 from html import escape
+from app.core.dependencies.auth import user_repository_instance
+from app.domain.user import Role, User
+from app.security.password import hash_password
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -44,6 +47,25 @@ app.add_middleware(
 
 # Mount versioned routes under /api/v1
 app.include_router(api_router, prefix=settings.API_V1_STR)
+
+
+@app.on_event("startup")
+async def seed_admin_user():
+    """
+    Dev-only bootstrap: creates a default ADMIN account on startup since
+    signup always forces EMPLOYEE and there's no other way to create the
+    first admin. Remove before any real deployment.
+    """
+    existing = await user_repository_instance.get_by_email("admin@assetflow.dev")
+    if existing:
+        return
+    admin = User(
+        email="admin@assetflow.dev",
+        hashed_password=hash_password("AdminPass1!"),
+        name="Admin User",
+        role=Role.ADMIN,
+    )
+    await user_repository_instance.create(admin)
 
 
 @app.get("/docs", include_in_schema=False, response_class=HTMLResponse)
